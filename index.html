@@ -84,14 +84,17 @@
     position: relative; border-radius: var(--radius); overflow: hidden;
     background: var(--down);
   }
-  /* red delete layer sits behind the card */
+  /* red delete button revealed behind the card; tappable */
   .swipe .delbg {
-    position: absolute; inset: 0; display: flex; align-items: center;
-    justify-content: flex-end; padding-right: 26px;
-    color: #fff; font-weight: 700; font-size: 15px; gap: 8px;
-    pointer-events: none;
+    position: absolute; top: 0; right: 0; bottom: 0;
+    width: 96px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    color: #fff; font-weight: 700; font-size: 13px;
+    background: var(--down); border: none; cursor: pointer;
   }
-  .swipe .delbg svg { width: 20px; height: 20px; }
+  .swipe .delbg svg { width: 22px; height: 22px; }
+  .swipe .delbg:active { background: #e04a4a; }
 
   .item {
     position: relative; z-index: 1;
@@ -99,8 +102,7 @@
     background: var(--panel); border: 1px solid var(--line);
     border-radius: var(--radius); padding: 12px 14px;
     touch-action: pan-y;
-    transition: transform 0.22s cubic-bezier(.22,.61,.36,1);
-    will-change: transform;
+    transition: transform 0.2s cubic-bezier(.22,.61,.36,1);
   }
   .item.dragging { transition: none; }
   .thumb {
@@ -235,7 +237,7 @@
       </div>
       <div class="note" id="note"></div>
       <div class="hint">
-        Tip: to remove an item, swipe it left on the Tracker tab.
+        Tip: to remove an item, swipe it left on the Tracker tab to reveal the red Delete button, then tap it.
       </div>
     </div>
   </section>
@@ -325,10 +327,10 @@
         : `#${it.productId}`;
 
       return `<div class="swipe" data-id="${it.productId}">
-        <div class="delbg">
+        <button class="delbg" onclick="remove('${it.productId}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           Delete
-        </div>
+        </button>
         <div class="item">
           ${img}
           <div>
@@ -353,19 +355,26 @@
     attachSwipe();
   }
 
-  // ---- Swipe-to-delete ----
-  const THRESHOLD = 80;   // px past which release = delete
-  const MAX = 96;         // px the card can travel
+  // ---- Swipe to reveal delete button ----
+  const REVEAL = 96;        // px the card slides to expose the delete button
+  const OPEN_AT = 40;       // px dragged past which we snap fully open on release
+
+  function closeAll(except) {
+    document.querySelectorAll(".item.open").forEach(c => {
+      if (c !== except) { c.classList.remove("open"); c.style.transform = "translateX(0)"; }
+    });
+  }
 
   function attachSwipe() {
     document.querySelectorAll(".swipe").forEach(swipe => {
       const card = swipe.querySelector(".item");
-      let startX = 0, startY = 0, dx = 0, dragging = false, decided = false, horiz = false;
+      let startX = 0, startY = 0, dx = 0, base = 0, dragging = false, decided = false, horiz = false, moved = false;
 
       const onStart = e => {
         const t = e.touches ? e.touches[0] : e;
         startX = t.clientX; startY = t.clientY;
-        dx = 0; dragging = true; decided = false; horiz = false;
+        base = card.classList.contains("open") ? -REVEAL : 0;
+        dx = base; dragging = true; decided = false; horiz = false; moved = false;
         card.classList.add("dragging");
       };
       const onMove = e => {
@@ -374,27 +383,28 @@
         const mx = t.clientX - startX;
         const my = t.clientY - startY;
         if (!decided) {
-          // lock direction on first meaningful movement
-          if (Math.abs(mx) > 8 || Math.abs(my) > 8) {
+          if (Math.abs(mx) > 6 || Math.abs(my) > 6) {
             decided = true;
             horiz = Math.abs(mx) > Math.abs(my);
+            if (horiz) closeAll(card);   // close others as soon as a horizontal drag begins
           }
         }
-        if (!horiz) return;            // let vertical scroll happen
+        if (!horiz) return;              // vertical → let the page scroll
         if (e.cancelable) e.preventDefault();
-        dx = Math.min(0, Math.max(-MAX, mx));   // only allow left
+        moved = true;
+        dx = Math.min(0, Math.max(-REVEAL, base + mx));   // clamp between closed and open
         card.style.transform = `translateX(${dx}px)`;
       };
       const onEnd = () => {
         if (!dragging) return;
         dragging = false;
         card.classList.remove("dragging");
-        if (dx <= -THRESHOLD) {
-          // animate fully off, then delete
-          card.style.transform = `translateX(-110%)`;
-          const id = swipe.getAttribute("data-id");
-          setTimeout(() => remove(id), 180);
+        // decide open vs closed based on how far it ended up
+        if (dx <= -OPEN_AT) {
+          card.classList.add("open");
+          card.style.transform = `translateX(-${REVEAL}px)`;
         } else {
+          card.classList.remove("open");
           card.style.transform = "translateX(0)";
         }
       };
@@ -404,7 +414,15 @@
       card.addEventListener("touchend", onEnd);
       card.addEventListener("touchcancel", onEnd);
 
-      // mouse fallback (desktop testing)
+      // tapping an open card (not on the delete button) closes it
+      card.addEventListener("click", () => {
+        if (!moved && card.classList.contains("open")) {
+          card.classList.remove("open");
+          card.style.transform = "translateX(0)";
+        }
+      });
+
+      // mouse fallback for desktop testing
       card.addEventListener("mousedown", e => {
         onStart(e);
         const mm = ev => onMove(ev);
@@ -413,6 +431,11 @@
         document.addEventListener("mouseup", mu);
       });
     });
+
+    // tap anywhere outside an open row closes it
+    document.addEventListener("touchstart", e => {
+      if (!e.target.closest(".swipe")) closeAll(null);
+    }, { passive: true });
   }
 
   function showLoading() { $("list").innerHTML = '<div class="spin"></div>'; }
