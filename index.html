@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Sealed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0c0e14;
+    --panel:     #14171f;
+    --panel-2:   #1b1f2a;
+    --line:      #262b38;
+    --ink:       #eef1f6;
+    --muted:     #7e879b;
+    --accent:    #ffcb3d;   /* foil gold */
+    --accent-2:  #4da3ff;   /* holo blue */
+    --up:        #4ad991;
+    --down:      #ff6b6b;
+    --radius:    14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--bg); }
+  body {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 22px 16px calc(env(safe-area-inset-bottom) + 40px);
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(77,163,255,0.10), transparent 60%),
+      radial-gradient(700px 400px at 0% 0%, rgba(255,203,61,0.08), transparent 55%),
+      var(--bg);
+  }
+  .wrap { max-width: 620px; margin: 0 auto; }
+
+  /* ---- Hero: portfolio value ---- */
+  .hero {
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border-radius: 20px;
+    padding: 22px 22px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.05) 45%, transparent 60%);
+    pointer-events: none;
+  }
+  .eyebrow {
+    font-family: "Spline Sans Mono", monospace;
+    font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .total {
+    font-family: "Spline Sans Mono", monospace;
+    font-size: 44px; font-weight: 600; letter-spacing: -1px;
+    margin-top: 6px; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .total .cents { color: var(--muted); font-size: 26px; }
+  .hero-sub {
+    margin-top: 10px; font-size: 13px; color: var(--muted);
+    display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--up); display: inline-block; }
+
+  /* ---- Add bar ---- */
+  .add {
+    margin-top: 16px; display: flex; gap: 8px;
+  }
+  .add input {
+    flex: 1; min-width: 0;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; color: var(--ink);
+    font: 14px/1.2 "Spline Sans Mono", monospace;
+    padding: 14px 14px;
+  }
+  .add input::placeholder { color: #4f5872; }
+  .add input:focus { outline: none; border-color: var(--accent-2); }
+  .add button {
+    background: var(--accent); color: #1a1505; border: none;
+    border-radius: 12px; font: 700 15px "Space Grotesk", sans-serif;
+    padding: 0 20px; cursor: pointer; white-space: nowrap;
+  }
+  .add button:active { transform: translateY(1px); }
+  .add button:disabled { opacity: 0.5; cursor: default; }
+  .note { margin-top: 8px; font-size: 12px; min-height: 16px; color: var(--muted); }
+  .note.err { color: var(--down); }
+
+  /* ---- Section label ---- */
+  .barrow {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 26px 4px 12px;
+  }
+  .barrow h2 {
+    font-size: 13px; font-weight: 500; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .count { font-family: "Spline Sans Mono", monospace; font-size: 12px; color: var(--muted); }
+
+  /* ---- Product rows ---- */
+  .list { display: grid; gap: 10px; }
+  .item {
+    display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 12px 14px;
+    position: relative; overflow: hidden;
+  }
+  .thumb {
+    width: 56px; height: 56px; border-radius: 9px; object-fit: contain;
+    background: #fff; padding: 3px;
+  }
+  .thumb.ph { background: var(--panel-2); }
+  .pname {
+    font-size: 14.5px; font-weight: 500; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .pmeta {
+    font-family: "Spline Sans Mono", monospace;
+    font-size: 11px; color: var(--muted); margin-top: 4px;
+  }
+  .pmeta a { color: var(--accent-2); text-decoration: none; }
+  .pricebox { text-align: right; }
+  .pmkt {
+    font-family: "Spline Sans Mono", monospace;
+    font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .plabel { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .prange {
+    font-family: "Spline Sans Mono", monospace;
+    font-size: 11px; color: var(--muted); margin-top: 3px;
+  }
+  .del {
+    position: absolute; top: 8px; right: 10px;
+    background: none; border: none; color: #3c4458;
+    font-size: 18px; cursor: pointer; line-height: 1; padding: 4px;
+  }
+  .del:hover { color: var(--down); }
+
+  /* ---- States ---- */
+  .empty, .err-box {
+    border: 1px dashed var(--line); border-radius: var(--radius);
+    padding: 32px 20px; text-align: center; color: var(--muted);
+    font-size: 14px; line-height: 1.6;
+  }
+  .err-box { color: var(--down); border-color: rgba(255,107,107,0.3); }
+  .spin {
+    width: 22px; height: 22px; border: 2px solid var(--line);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite; margin: 28px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .skeleton { animation: pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.5; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spin, .skeleton { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">Sealed Portfolio · TCGplayer market</div>
+    <div class="total" id="total">$0<span class="cents">.00</span></div>
+    <div class="hero-sub">
+      <span><span class="dot"></span> <span id="updated">—</span></span>
+      <span id="itemcount">0 items</span>
+    </div>
+
+    <div class="add">
+      <input id="url" type="url" inputmode="url" autocomplete="off"
+             placeholder="Paste a TCGplayer product link…">
+      <button id="addbtn" onclick="add()">Add</button>
+    </div>
+    <div class="note" id="note">Paste any TCGplayer product URL — I'll pull the name, image, and live price.</div>
+  </div>
+
+  <div class="barrow">
+    <h2>Tracking</h2>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="list" id="list"></div>
+
+</div>
+
+<script>
+  // ===== Paste your Apps Script /exec URL between the quotes =====
+  const API_URL = "https://script.google.com/macros/s/AKfycbwUr_Ryo9okzx7rCnVY5s0TgRsg4nM-zrW-_P1C3mcYNqFhBqocfQWmPRzhEtuTVbOjNw/exec";
+
+  const $ = id => document.getElementById(id);
+  const money = n => (n == null || isNaN(n)) ? "—" : "$" + Number(n).toFixed(2);
+
+  function moneyBig(n) {
+    if (n == null || isNaN(n)) return '$0<span class="cents">.00</span>';
+    const [d, c] = Number(n).toFixed(2).split(".");
+    const dd = Number(d).toLocaleString();
+    return "$" + dd + '<span class="cents">.' + c + '</span>';
+  }
+
+  // Pick the printing to headline for sealed: usually only one ("Sealed"/"Normal").
+  function headline(prices) {
+    if (!prices) return null;
+    const keys = Object.keys(prices);
+    if (!keys.length) return null;
+    const k = keys.find(x => /seal/i.test(x)) || keys.find(x => /normal/i.test(x)) || keys[0];
+    return prices[k];
+  }
+
+  function setNote(msg, isErr) {
+    const n = $("note");
+    n.textContent = msg;
+    n.className = "note" + (isErr ? " err" : "");
+  }
+
+  async function call(params) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(API_URL + (API_URL.includes("?") ? "&" : "?") + qs);
+    return res.json();
+  }
+
+  function render(data) {
+    const list = $("list");
+    if (!data.items || !data.items.length) {
+      list.innerHTML = '<div class="empty">Nothing tracked yet.<br>Paste a TCGplayer link above to start.</div>';
+      $("total").innerHTML = moneyBig(0);
+      $("updated").textContent = "—";
+      $("itemcount").textContent = "0 items";
+      $("count").textContent = "";
+      return;
+    }
+
+    let total = 0;
+    list.innerHTML = data.items.map(it => {
+      const h = headline(it.prices);
+      const mkt = h ? h.market : null;
+      if (mkt) total += Number(mkt);
+
+      const range = h && (h.low != null || h.high != null)
+        ? `${money(h.low)} – ${money(h.high)}` : "no range";
+      const img = it.image
+        ? `<img class="thumb" src="${it.image}" alt="" onerror="this.classList.add('ph');this.removeAttribute('src')">`
+        : `<div class="thumb ph"></div>`;
+      const link = it.url
+        ? `<a href="${it.url}" target="_blank" rel="noopener">view on tcgplayer ↗</a>`
+        : `#${it.productId}`;
+
+      return `<div class="item">
+        ${img}
+        <div>
+          <div class="pname">${esc(it.name)}</div>
+          <div class="pmeta">${link}</div>
+        </div>
+        <div class="pricebox">
+          <div class="plabel">market</div>
+          <div class="pmkt">${money(mkt)}</div>
+          <div class="prange">${range}</div>
+        </div>
+        <button class="del" title="Remove" onclick="remove('${it.productId}')">×</button>
+      </div>`;
+    }).join("");
+
+    $("total").innerHTML = moneyBig(total);
+    $("itemcount").textContent = data.items.length + (data.items.length === 1 ? " item" : " items");
+    $("count").textContent = data.items.length;
+    const t = data.fetchedAt ? new Date(data.fetchedAt) : new Date();
+    $("updated").textContent = "Updated " + t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  }
+
+  function showLoading() {
+    $("list").innerHTML = '<div class="spin"></div>';
+  }
+
+  async function load() {
+    if (API_URL.includes("PASTE_YOUR")) {
+      $("list").innerHTML = '<div class="err-box">Add your Apps Script /exec URL to API_URL near the top of index.html, then reload.</div>';
+      return;
+    }
+    showLoading();
+    try {
+      const data = await call({ action: "list" });
+      if (!data.ok) throw new Error(data.error || "Unknown error");
+      render(data);
+    } catch (err) {
+      $("list").innerHTML = `<div class="err-box">Couldn't load. ${esc(String(err))}</div>`;
+    }
+  }
+
+  async function add() {
+    const input = $("url");
+    const url = input.value.trim();
+    if (!url) { setNote("Paste a link first.", true); return; }
+
+    const btn = $("addbtn");
+    btn.disabled = true; btn.textContent = "…";
+    setNote("Looking it up…", false);
+
+    try {
+      const data = await call({ action: "add", url });
+      if (!data.ok) { setNote(data.error || "Couldn't add that.", true); return; }
+      input.value = "";
+      setNote("Added.", false);
+      render(data);
+    } catch (err) {
+      setNote("Network error. Try again.", true);
+    } finally {
+      btn.disabled = false; btn.textContent = "Add";
+    }
+  }
+
+  async function remove(id) {
+    try {
+      const data = await call({ action: "remove", id });
+      if (data.ok) render(data);
+    } catch (err) { /* ignore */ }
+  }
+
+  // Enter key adds
+  document.addEventListener("DOMContentLoaded", () => {
+    $("url").addEventListener("keydown", e => { if (e.key === "Enter") add(); });
+  });
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  load();
+</script>
+</body>
+</html>
