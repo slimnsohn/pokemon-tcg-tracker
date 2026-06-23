@@ -116,6 +116,11 @@
   }
   .pmeta { font-family: "Spline Sans Mono", monospace; font-size: 11px; color: var(--muted); margin-top: 4px; }
   .pmeta a { color: var(--accent-2); text-decoration: none; }
+  .market-row {
+    font-family: "Spline Sans Mono", monospace;
+    font-size: 11px; color: var(--muted); margin-top: 6px;
+  }
+  .market-row b { color: var(--ink); font-weight: 600; }
   .pricebox { text-align: right; }
   .pmkt {
     font-family: "Spline Sans Mono", monospace;
@@ -207,7 +212,7 @@
   <!-- ============ TRACKER TAB ============ -->
   <section class="view active" id="view-tracker">
     <div class="hero">
-      <div class="eyebrow">Sealed Portfolio · TCGplayer market</div>
+      <div class="eyebrow">Sealed Portfolio · market value</div>
       <div class="total" id="total">$0<span class="cents">.00</span></div>
       <div class="hero-sub">
         <span><span class="dot"></span> <span id="updated">—</span></span>
@@ -271,14 +276,6 @@
     return "$" + Number(d).toLocaleString() + '<span class="cents">.' + c + '</span>';
   }
 
-  function headline(prices) {
-    if (!prices) return null;
-    const keys = Object.keys(prices);
-    if (!keys.length) return null;
-    const k = keys.find(x => /seal/i.test(x)) || keys.find(x => /normal/i.test(x)) || keys[0];
-    return prices[k];
-  }
-
   function setNote(msg, isErr) {
     const n = $("note");
     n.textContent = msg || "";
@@ -313,18 +310,25 @@
 
     let total = 0;
     list.innerHTML = data.items.map(it => {
-      const h = headline(it.prices);
-      const mkt = h ? h.market : null;
-      if (mkt) total += Number(mkt);
+      const mkt = (it.market != null) ? Number(it.market) : null;
+      if (mkt) total += mkt;
 
-      const range = h && (h.low != null || h.high != null)
-        ? `${money(h.low)} – ${money(h.high)}` : "no range";
+      const hasListing = it.listing != null;
+      const ship = (it.shipping != null && it.shipping > 0) ? ` + ${money(it.shipping)} ship` : (it.shipping === 0 ? " + free ship" : "");
+      const allIn = hasListing ? Number(it.listing) + Number(it.shipping || 0) : null;
+
       const img = it.image
         ? `<img class="thumb" src="${it.image}" alt="" onerror="this.classList.add('ph');this.removeAttribute('src')">`
         : `<div class="thumb ph"></div>`;
       const link = it.url
         ? `<a href="${it.url}" target="_blank" rel="noopener">view on tcgplayer ↗</a>`
         : `#${it.productId}`;
+
+      const listingHtml = hasListing
+        ? `<div class="plabel">lowest listing</div>
+           <div class="pmkt">${money(it.listing)}</div>
+           <div class="prange">${ship}${allIn != null && (it.shipping > 0) ? ` · ${money(allIn)} all-in` : ""}</div>`
+        : `<div class="plabel">lowest listing</div><div class="pmkt">—</div><div class="prange">no listings</div>`;
 
       return `<div class="swipe" data-id="${it.productId}">
         <button class="delbg" onclick="remove('${it.productId}')">
@@ -333,14 +337,13 @@
         </button>
         <div class="item">
           ${img}
-          <div>
+          <div class="pinfo">
             <div class="pname">${esc(it.name)}</div>
             <div class="pmeta">${link}</div>
+            <div class="market-row">Market <b>${money(mkt)}</b></div>
           </div>
           <div class="pricebox">
-            <div class="plabel">market</div>
-            <div class="pmkt">${money(mkt)}</div>
-            <div class="prange">${range}</div>
+            ${listingHtml}
           </div>
         </div>
       </div>`;
