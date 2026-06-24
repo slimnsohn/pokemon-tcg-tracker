@@ -317,13 +317,9 @@
         : `#${it.productId}`;
       const sellers = (it.sellers != null) ? `${it.sellers} sellers` : "";
 
-      // Shipping: show "+ $X shipping" only when the all-in price is meaningfully
-      // higher than the item price. If it's within a few cents, shipping is included → show nothing.
-      let shipLine = "";
-      if (it.lowest != null && it.lowestShipped != null) {
-        const diff = Number(it.lowestShipped) - Number(it.lowest);
-        if (diff > 0.01) shipLine = `+ ${money(diff)} shipping`;
-      }
+      // Headline = lowest all-in price (buy-box / cheapest total with shipping).
+      // This matches TCGplayer's featured listing and skips junk lowest-item listings.
+      const priceShown = (it.lowestShipped != null) ? it.lowestShipped : it.lowest;
 
       return `<div class="swipe" data-id="${it.productId}">
         <button class="delbg" onclick="remove('${it.productId}')">
@@ -338,10 +334,10 @@
           </div>
           <div class="pricebox">
             <div class="prow">
-              <span class="plabel">price</span>
-              <span class="pval big">${money(it.lowest)}</span>
+              <span class="plabel">lowest</span>
+              <span class="pval big">${money(priceShown)}</span>
             </div>
-            ${shipLine ? `<div class="pship">${shipLine}</div>` : ""}
+            <div class="pship">shipped</div>
             <div class="prow market">
               <span class="plabel">market</span>
               <span class="pval">${money(mkt)}</span>
