@@ -79,7 +79,7 @@
 
   .item {
     position: relative; z-index: 1;
-    display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center;
+    display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center;
     background: var(--panel); border: 1px solid var(--line);
     border-radius: var(--radius); padding: 12px 14px;
     touch-action: pan-y;
@@ -87,7 +87,7 @@
   }
   .item.dragging { transition: none; }
   .thumb {
-    width: 56px; height: 56px; border-radius: 9px; object-fit: contain;
+    width: 52px; height: 52px; border-radius: 9px; object-fit: contain;
     background: #fff; padding: 3px;
   }
   .thumb.ph { background: var(--panel-2); }
@@ -97,18 +97,28 @@
   }
   .pmeta { font-family: "Spline Sans Mono", monospace; font-size: 11px; color: var(--muted); margin-top: 4px; }
   .pmeta a { color: var(--accent-2); text-decoration: none; }
-  .market-row {
-    font-family: "Spline Sans Mono", monospace;
-    font-size: 11px; color: var(--muted); margin-top: 6px;
+
+  .pricebox { text-align: right; min-width: 118px; }
+  .prow {
+    display: flex; align-items: baseline; justify-content: flex-end; gap: 8px;
   }
-  .market-row b { color: var(--ink); font-weight: 600; }
-  .pricebox { text-align: right; }
-  .pmkt {
-    font-family: "Spline Sans Mono", monospace;
-    font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums;
+  .prow .plabel {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
   }
-  .plabel { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-  .prange { font-family: "Spline Sans Mono", monospace; font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .prow .pval {
+    font-family: "Spline Sans Mono", monospace; font-weight: 600;
+    font-variant-numeric: tabular-nums; font-size: 15px; color: var(--ink);
+  }
+  .prow .pval.big { font-size: 19px; color: var(--accent); }
+  .pship {
+    font-family: "Spline Sans Mono", monospace; font-size: 11px;
+    color: var(--muted); margin-top: 1px;
+  }
+  .prow.market { margin-top: 8px; }
+  .psellers {
+    font-family: "Spline Sans Mono", monospace; font-size: 10px;
+    color: var(--muted); margin-top: 2px;
+  }
 
   /* ---- Settings tab ---- */
   .card-box {
@@ -289,14 +299,19 @@
 
     list.innerHTML = data.items.map(it => {
       const mkt = (it.market != null) ? Number(it.market) : null;
-
       const hasLow = it.lowest != null;
-      const shipped = it.lowestShipped != null ? it.lowestShipped : null;
-      // shipping = difference between all-in and item-only, if both present
-      const shipCost = (hasLow && shipped != null) ? Math.max(0, shipped - it.lowest) : null;
-      const shipLine = shipped != null
-        ? (shipCost && shipCost > 0.01 ? `+ ${money(shipCost)} ship · ${money(shipped)} all-in` : `free ship · ${money(shipped)} all-in`)
-        : "";
+      const shipped = (it.lowestShipped != null) ? Number(it.lowestShipped) : null;
+
+      // "shipping" line: compare cheapest all-in vs cheapest item-only.
+      // If all-in <= item-only, the cheapest listing ships free. Otherwise show the all-in total.
+      let shipLine = "";
+      if (shipped != null && hasLow) {
+        shipLine = (shipped <= it.lowest + 0.01)
+          ? "free shipping"
+          : `${money(shipped)} shipped`;
+      } else if (shipped != null) {
+        shipLine = `${money(shipped)} shipped`;
+      }
 
       const img = it.image
         ? `<img class="thumb" src="${it.image}" alt="" onerror="this.classList.add('ph');this.removeAttribute('src')">`
@@ -304,13 +319,7 @@
       const link = it.url
         ? `<a href="${it.url}" target="_blank" rel="noopener">view on tcgplayer ↗</a>`
         : `#${it.productId}`;
-      const sellers = (it.sellers != null) ? ` · ${it.sellers} sellers` : "";
-
-      const listingHtml = hasLow
-        ? `<div class="plabel">lowest listing</div>
-           <div class="pmkt">${money(it.lowest)}</div>
-           <div class="prange">${shipLine}</div>`
-        : `<div class="plabel">lowest listing</div><div class="pmkt">—</div><div class="prange">no listings</div>`;
+      const sellers = (it.sellers != null) ? `${it.sellers} sellers` : "";
 
       return `<div class="swipe" data-id="${it.productId}">
         <button class="delbg" onclick="remove('${it.productId}')">
@@ -322,10 +331,18 @@
           <div class="pinfo">
             <div class="pname">${esc(it.name)}</div>
             <div class="pmeta">${link}</div>
-            <div class="market-row">Market <b>${money(mkt)}</b>${sellers}</div>
           </div>
           <div class="pricebox">
-            ${listingHtml}
+            <div class="prow">
+              <span class="plabel">lowest</span>
+              <span class="pval big">${money(it.lowest)}</span>
+            </div>
+            ${shipLine ? `<div class="pship">${shipLine}</div>` : ""}
+            <div class="prow market">
+              <span class="plabel">market</span>
+              <span class="pval">${money(mkt)}</span>
+            </div>
+            ${sellers ? `<div class="psellers">${sellers}</div>` : ""}
           </div>
         </div>
       </div>`;
