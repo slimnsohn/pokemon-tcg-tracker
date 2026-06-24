@@ -37,45 +37,26 @@
   }
   .wrap { max-width: 620px; margin: 0 auto; }
 
-  /* ---- Hero: portfolio value (tracker tab) ---- */
-  .hero {
-    border: 1px solid var(--line);
-    background: linear-gradient(180deg, var(--panel-2), var(--panel));
-    border-radius: 20px;
-    padding: 22px 22px 20px;
-    position: relative; overflow: hidden;
-  }
-  .hero::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.05) 45%, transparent 60%);
-    pointer-events: none;
-  }
-  .eyebrow {
-    font-family: "Spline Sans Mono", monospace;
-    font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted);
-  }
-  .total {
-    font-family: "Spline Sans Mono", monospace;
-    font-size: 44px; font-weight: 600; letter-spacing: -1px;
-    margin-top: 6px; line-height: 1; font-variant-numeric: tabular-nums;
-  }
-  .total .cents { color: var(--muted); font-size: 26px; }
-  .hero-sub {
-    margin-top: 10px; font-size: 13px; color: var(--muted);
-    display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
-  }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--up); display: inline-block; }
-
-  /* ---- Section label ---- */
-  .barrow {
+  /* ---- App header ---- */
+  .apphead {
     display: flex; align-items: baseline; justify-content: space-between;
-    margin: 26px 4px 12px;
+    margin: 4px 4px 18px; gap: 12px;
   }
+  .apphead h1 {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+  }
+  .apphead h1 span { color: var(--accent); }
+  .stamp {
+    font-family: "Spline Sans Mono", monospace;
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
+
+  /* ---- Section label (Settings) ---- */
+  .barrow { margin: 4px 4px 12px; }
   .barrow h2 {
     font-size: 13px; font-weight: 500; letter-spacing: 1.5px;
     text-transform: uppercase; color: var(--muted);
   }
-  .count { font-family: "Spline Sans Mono", monospace; font-size: 12px; color: var(--muted); }
 
   /* ---- Product rows (swipe to delete) ---- */
   .list { display: grid; gap: 10px; }
@@ -200,6 +181,21 @@
   .view { display: none; }
   .view.active { display: block; }
 
+  /* ---- Pull to refresh ---- */
+  #ptr {
+    position: fixed; top: 0; left: 0; right: 0; height: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; z-index: 40; pointer-events: none;
+    color: var(--muted); transition: height 0.2s ease;
+  }
+  #ptr.dragging { transition: none; }
+  #ptr .ring {
+    width: 22px; height: 22px; border: 2px solid var(--line);
+    border-top-color: var(--accent); border-radius: 50%;
+    transition: opacity 0.15s;
+  }
+  #ptr.spin .ring { animation: spin 0.7s linear infinite; }
+
   @media (prefers-reduced-motion: reduce) {
     .spin { animation: none; }
     .item { transition: none; }
@@ -207,22 +203,14 @@
 </style>
 </head>
 <body>
+<div id="ptr"><div class="ring"></div></div>
 <div class="wrap">
 
   <!-- ============ TRACKER TAB ============ -->
   <section class="view active" id="view-tracker">
-    <div class="hero">
-      <div class="eyebrow">Sealed Portfolio · market value</div>
-      <div class="total" id="total">$0<span class="cents">.00</span></div>
-      <div class="hero-sub">
-        <span><span class="dot"></span> <span id="updated">—</span></span>
-        <span id="itemcount">0 items</span>
-      </div>
-    </div>
-
-    <div class="barrow">
-      <h2>Tracking</h2>
-      <span class="count" id="count"></span>
+    <div class="apphead">
+      <h1>Sealed <span>Prices</span></h1>
+      <span class="stamp" id="updated">—</span>
     </div>
     <div class="list" id="list"></div>
   </section>
@@ -270,12 +258,6 @@
   const $ = id => document.getElementById(id);
   const money = n => (n == null || isNaN(n)) ? "—" : "$" + Number(n).toFixed(2);
 
-  function moneyBig(n) {
-    if (n == null || isNaN(n)) return '$0<span class="cents">.00</span>';
-    const [d, c] = Number(n).toFixed(2).split(".");
-    return "$" + Number(d).toLocaleString() + '<span class="cents">.' + c + '</span>';
-  }
-
   function setNote(msg, isErr) {
     const n = $("note");
     n.textContent = msg || "";
@@ -301,17 +283,12 @@
     const list = $("list");
     if (!data.items || !data.items.length) {
       list.innerHTML = '<div class="empty">Nothing tracked yet.<br>Go to Settings to add a product.</div>';
-      $("total").innerHTML = moneyBig(0);
       $("updated").textContent = "—";
-      $("itemcount").textContent = "0 items";
-      $("count").textContent = "";
       return;
     }
 
-    let total = 0;
     list.innerHTML = data.items.map(it => {
       const mkt = (it.market != null) ? Number(it.market) : null;
-      if (mkt) total += mkt;
 
       const hasLow = it.lowest != null;
       const shipped = it.lowestShipped != null ? it.lowestShipped : null;
@@ -354,9 +331,6 @@
       </div>`;
     }).join("");
 
-    $("total").innerHTML = moneyBig(total);
-    $("itemcount").textContent = data.items.length + (data.items.length === 1 ? " item" : " items");
-    $("count").textContent = data.items.length;
     const t = data.fetchedAt ? new Date(data.fetchedAt) : new Date();
     $("updated").textContent = "Updated " + t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
 
@@ -447,6 +421,49 @@
   }
 
   function showLoading() { $("list").innerHTML = '<div class="spin"></div>'; }
+
+  // ---- Pull to refresh ----
+  (function setupPTR() {
+    const ptr = $("ptr");
+    const TRIGGER = 70;     // px pull distance to trigger refresh
+    const MAXPULL = 110;
+    let startY = 0, pulling = false, dist = 0;
+
+    function atTop() { return window.scrollY <= 0; }
+
+    document.addEventListener("touchstart", e => {
+      if (!atTop()) { pulling = false; return; }
+      startY = e.touches[0].clientY; pulling = true; dist = 0;
+      ptr.classList.add("dragging");
+    }, { passive: true });
+
+    document.addEventListener("touchmove", e => {
+      if (!pulling) return;
+      const d = e.touches[0].clientY - startY;
+      if (d <= 0) { dist = 0; ptr.style.height = "0px"; return; }
+      // only when still at the top of the page
+      if (!atTop()) { pulling = false; ptr.style.height = "0px"; return; }
+      dist = Math.min(MAXPULL, d * 0.5);          // rubber-band damping
+      ptr.style.height = dist + "px";
+      ptr.querySelector(".ring").style.opacity = Math.min(1, dist / TRIGGER);
+    }, { passive: true });
+
+    document.addEventListener("touchend", () => {
+      if (!pulling) return;
+      pulling = false;
+      ptr.classList.remove("dragging");
+      if (dist >= TRIGGER) {
+        ptr.style.height = "52px";
+        ptr.classList.add("spin");
+        load().finally(() => {
+          ptr.classList.remove("spin");
+          ptr.style.height = "0px";
+        });
+      } else {
+        ptr.style.height = "0px";
+      }
+    });
+  })();
 
   async function load() {
     if (API_URL.includes("PASTE_YOUR")) {
