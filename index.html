@@ -313,9 +313,13 @@
       const mkt = (it.market != null) ? Number(it.market) : null;
       if (mkt) total += mkt;
 
-      const hasListing = it.listing != null;
-      const ship = (it.shipping != null && it.shipping > 0) ? ` + ${money(it.shipping)} ship` : (it.shipping === 0 ? " + free ship" : "");
-      const allIn = hasListing ? Number(it.listing) + Number(it.shipping || 0) : null;
+      const hasLow = it.lowest != null;
+      const shipped = it.lowestShipped != null ? it.lowestShipped : null;
+      // shipping = difference between all-in and item-only, if both present
+      const shipCost = (hasLow && shipped != null) ? Math.max(0, shipped - it.lowest) : null;
+      const shipLine = shipped != null
+        ? (shipCost && shipCost > 0.01 ? `+ ${money(shipCost)} ship · ${money(shipped)} all-in` : `free ship · ${money(shipped)} all-in`)
+        : "";
 
       const img = it.image
         ? `<img class="thumb" src="${it.image}" alt="" onerror="this.classList.add('ph');this.removeAttribute('src')">`
@@ -323,11 +327,12 @@
       const link = it.url
         ? `<a href="${it.url}" target="_blank" rel="noopener">view on tcgplayer ↗</a>`
         : `#${it.productId}`;
+      const sellers = (it.sellers != null) ? ` · ${it.sellers} sellers` : "";
 
-      const listingHtml = hasListing
+      const listingHtml = hasLow
         ? `<div class="plabel">lowest listing</div>
-           <div class="pmkt">${money(it.listing)}</div>
-           <div class="prange">${ship}${allIn != null && (it.shipping > 0) ? ` · ${money(allIn)} all-in` : ""}</div>`
+           <div class="pmkt">${money(it.lowest)}</div>
+           <div class="prange">${shipLine}</div>`
         : `<div class="plabel">lowest listing</div><div class="pmkt">—</div><div class="prange">no listings</div>`;
 
       return `<div class="swipe" data-id="${it.productId}">
@@ -340,7 +345,7 @@
           <div class="pinfo">
             <div class="pname">${esc(it.name)}</div>
             <div class="pmeta">${link}</div>
-            <div class="market-row">Market <b>${money(mkt)}</b></div>
+            <div class="market-row">Market <b>${money(mkt)}</b>${sellers}</div>
           </div>
           <div class="pricebox">
             ${listingHtml}
