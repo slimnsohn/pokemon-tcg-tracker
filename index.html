@@ -129,21 +129,12 @@
   .card-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
   .card-box p.sub { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
   .add { display: flex; gap: 8px; }
-  .inwrap { flex: 1; min-width: 0; position: relative; display: flex; }
   .add input {
     flex: 1; min-width: 0;
     background: var(--panel); border: 1px solid var(--line);
     border-radius: 12px; color: var(--ink);
-    font: 14px/1.2 "Spline Sans Mono", monospace; padding: 14px 38px 14px 14px;
+    font: 14px/1.2 "Spline Sans Mono", monospace; padding: 14px;
   }
-  .clearx {
-    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-    width: 26px; height: 26px; border: none; background: var(--line);
-    color: var(--ink); border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; padding: 0;
-  }
-  .clearx svg { width: 13px; height: 13px; }
-  .clearx:active { background: var(--down); color: #fff; }
   .add input::placeholder { color: #4f5872; }
   .add input:focus { outline: none; border-color: var(--accent-2); }
   .add button {
@@ -254,13 +245,11 @@
       <h3>Add a product</h3>
       <p class="sub">Paste any TCGplayer product link. The name, image, and live price are pulled automatically.</p>
       <div class="add">
-        <div class="inwrap">
-          <input id="url" type="url" inputmode="url" autocomplete="off"
-                 placeholder="Paste a TCGplayer link…" oninput="toggleClear()">
-          <button id="clearbtn" class="clearx" onclick="clearInput()" title="Clear" aria-label="Clear" hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
+        <input id="url" type="url" inputmode="url" autocomplete="off"
+               placeholder="Paste a TCGplayer link…" oninput="toggleClear()">
+        <button id="clearbtn" class="paste" onclick="clearInput()" title="Clear" aria-label="Clear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
         <button id="pastebtn" class="paste" onclick="pasteClip()" title="Paste from clipboard" aria-label="Paste">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
         </button>
@@ -339,9 +328,19 @@
         : `#${it.productId}`;
       const sellers = (it.sellers != null) ? `${it.sellers} sellers` : "";
 
-      // Headline = lowest all-in price (buy-box / cheapest total with shipping).
-      // This matches TCGplayer's featured listing and skips junk lowest-item listings.
-      const priceShown = (it.lowestShipped != null) ? it.lowestShipped : it.lowest;
+      // Prefer the real per-listing split (item + shipping shown separately) when the
+      // proxy succeeded. Otherwise fall back to the blended all-in number.
+      const hasSplit = it.splitPrice != null;
+      let priceShown, shipLine;
+      if (hasSplit) {
+        priceShown = it.splitPrice;
+        shipLine = (it.splitShipping != null && it.splitShipping > 0.01)
+          ? `+ ${money(it.splitShipping)} shipping`
+          : "free shipping";
+      } else {
+        priceShown = (it.lowestShipped != null) ? it.lowestShipped : it.lowest;
+        shipLine = "incl. shipping";
+      }
 
       return `<div class="swipe" data-id="${it.productId}">
         <button class="delbg" onclick="remove('${it.productId}')">
@@ -359,7 +358,7 @@
               <span class="plabel">lowest</span>
               <span class="pval big">${money(priceShown)}</span>
             </div>
-            <div class="pship">shipped</div>
+            <div class="pship">${shipLine}</div>
             <div class="prow market">
               <span class="plabel">market</span>
               <span class="pval">${money(mkt)}</span>
@@ -560,7 +559,9 @@
     i.focus();
   }
   function toggleClear() {
-    $("clearbtn").hidden = !$("url").value;
+    // standalone button: dim it slightly when there's nothing to clear
+    const b = $("clearbtn");
+    if (b) b.style.opacity = $("url").value ? "1" : "0.4";
   }
 
   // ---- Clipboard paste ----
